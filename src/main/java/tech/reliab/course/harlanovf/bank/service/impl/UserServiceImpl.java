@@ -1,30 +1,40 @@
 package tech.reliab.course.harlanovf.bank.service.impl;
 
-import tech.reliab.course.harlanovf.bank.entity.CreditAccount;
-import tech.reliab.course.harlanovf.bank.entity.PaymentAccount;
-import tech.reliab.course.harlanovf.bank.entity.User;
-import tech.reliab.course.harlanovf.bank.entity.Bank;
+import tech.reliab.course.harlanovf.bank.entity.*;
+import tech.reliab.course.harlanovf.bank.service.BankService;
 import tech.reliab.course.harlanovf.bank.service.UserService;
 
 import java.time.LocalDate;
-import java.util.Random;
+import java.util.*;
 
 
 public class UserServiceImpl implements UserService {
     private Random random = new Random();
+    private final Map<Long, User> usersTable = new HashMap<>();
+    private final Map<Long, List<PaymentAccount>> paymentAccountsByUserIdTable = new HashMap<>();
+    private final Map<Long, List<CreditAccount>> creditAccountsByUserIdTable = new HashMap<>();
+    private final BankService bankService;
 
-    public User createUser(String fullName, LocalDate dateOfBirth, String workplace) {
-        double monthlyIncome = generateRandomIncome(); // Генерация случайного дохода
-        int creditScore = calculateCreditScore(monthlyIncome); // Расчет кредитного рейтинга
-        User user = new User(fullName, dateOfBirth, workplace, monthlyIncome, creditScore);
-        return user;
+    public UserServiceImpl(BankService bankService) {
+        this.bankService = bankService;
     }
 
+    public User createUser(String fullName, LocalDate dateOfBirth, Bank bank, String workplace) {
+        double monthlyIncome = generateRandomIncome(); // Генерация случайного дохода
+        int creditScore = calculateCreditScore(monthlyIncome); // Расчет кредитного рейтинга
+        User user = new User(fullName, dateOfBirth, bank, workplace, monthlyIncome, creditScore);
+
+        usersTable.put(user.getId(), user);
+        paymentAccountsByUserIdTable.put(user.getId(), new ArrayList<>());
+        creditAccountsByUserIdTable.put(user.getId(), new ArrayList<>());
+        bankService.addUser(user.getBank().getId(), user);
+
+        return user;
+    }
 
     private double generateRandomIncome() {
         return random.nextDouble() * 10000; // Генерация случайного дохода до 10 000
     }
-
 
     private int calculateCreditScore(double income) {
         if (income < 1000) {
@@ -50,32 +60,29 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-
-    public void addBankToUser(User user, Bank bank) {
-
+    public User getUser(Long id) {
+        return usersTable.get(id);
     }
 
-
-    public void addCreditAccountToUser(User user, CreditAccount creditAccount) {
-
+    public void addCreditAccount(Long userId, CreditAccount creditAccount) {
+        List<CreditAccount> clientCreditAccounts = creditAccountsByUserIdTable.get(userId);
+        creditAccount.setUser(getUser(userId));
+        clientCreditAccounts.add(creditAccount);
     }
 
-
-    public void addPaymentAccountToUser(User user, PaymentAccount paymentAccount) {
-
+    public void addPaymentAccount(Long userId, PaymentAccount paymentAccount) {
+        List<PaymentAccount> clientCreditAccounts = paymentAccountsByUserIdTable.get(userId);
+        paymentAccount.setUser(getUser(userId));
+        clientCreditAccounts.add(paymentAccount);
     }
 
-
-    public void deleteBankFromUser(User user, Bank bank) {
-
+    public void deleteCreditAccount(Long userId, CreditAccount creditAccount) {
+        creditAccount.setUser(null);
+        creditAccountsByUserIdTable.get(userId).remove(creditAccount);
     }
 
-
-    public void deleteCreditAccountFromUser(User user, CreditAccount creditAccount) {
-    }
-
-
-    public void deletePaymentAccountToUser(User user, PaymentAccount paymentAccount) {
-
+    public void deletePaymentAccount(Long userId, PaymentAccount paymentAccount) {
+        paymentAccount.setUser(null);
+        paymentAccountsByUserIdTable.get(userId).remove(paymentAccount);
     }
 }
